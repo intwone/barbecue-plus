@@ -1,11 +1,11 @@
  // include the display LCD library
 #include <LiquidCrystal.h>  
 
-boolean right   = 0x00, button01 = 0x00,
-        up      = 0x00, button02 = 0x00,
-        down    = 0x00, button03 = 0x00,
-        left    = 0x00, button04 = 0x00,
-        select  = 0x00, button05 = 0x00;
+boolean right   = 0, button01 = 0,
+        up      = 0, button02 = 0,
+        down    = 0, button03 = 0,
+        left    = 0, button04 = 0,
+        select  = 0, button05 = 0;
 
 // select the pins used on the LCD panel
 LiquidCrystal disp(8,  // RS digital 8
@@ -27,9 +27,9 @@ void screen5();
 void screen6();
 
 // declaration of variables
-int adc_value = 0x00;
-int optionsMenu = 0x00;  
-int resp = 0x00;
+int adc_value = 0;
+int optionsMenu = 0;  
+int resp = 0;
 int slot[4][2]; // slot [row][column]
 
 /*
@@ -102,7 +102,7 @@ void screen0() {
 
 void screen1() {
   // int menu = matriz_esp[valor_esp][0]; // inicia valor do menu  
-  int menu = 0x01, button=0x00;  
+  int menu = 1, button = 0;  
   int control = 0;
   
   do {
@@ -160,7 +160,7 @@ void screen1() {
 }
 
 void screen2() {
-  int menu = 0x01;  
+  int menu = 1;  
   
   do {
     disp.setCursor(0,0);
@@ -217,7 +217,7 @@ void screen2() {
 }
 
 void screen3() {
-  int menu = 0x01;  
+  int menu = 1;  
   
   do {
     disp.setCursor(0,0);
@@ -282,7 +282,7 @@ void screen3() {
 }
 
 void screen4() {
-  int menu = 0x01;  
+  int menu = 1;  
   
   do {
     disp.setCursor(0,0);
@@ -348,7 +348,7 @@ void selected_slot() {
 }
 
 int keyboardRead() {
-  int but=0;
+  int but = 0;
   
   while(!but) {
     adc_value = analogRead(A0);
