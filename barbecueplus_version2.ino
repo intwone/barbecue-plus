@@ -1,5 +1,6 @@
  // include the display LCD library
 #include <LiquidCrystal.h>  
+#include <TimerOne.h>
 
 boolean right   = 0, button01 = 0,
         up      = 0, button02 = 0,
@@ -16,8 +17,8 @@ LiquidCrystal disp(8,  // RS digital 8
                    7); // D7 digital 7
 
 // functions prototype                  
-int keyboardRead();
-void selected_slot();
+int  keyboardRead();
+void controlAll();
 void screen0();
 void screen1();
 void screen2();
@@ -27,32 +28,44 @@ void screen5();
 void screen6();
 
 // declaration of variables
-int adc_value = 0;
-int optionsMenu = 0;  
-int resp = 0;
-int slot[4][2]; // slot [row][column]
+int transistor_base = 0;
+int slot_atual      = 0;
+int adc_value       = 0;
+int options_menu    = 0;  
+int show_time       = 0;
+int esp1_count      = 0;
+int esp1_done       = 0;
+int resp            = 0;
+int slot[4][4]; // slot [row][column]
 
 /*
-----------------------------------------------
-|   SLOTS(0)    |   MEAT(1)   |  POINT(2)    |
-----------------------------------------------
-|   (0)SLOT 1   |             |              |
-----------------------------------------------
-|   (1)SLOT 2   |             |              |
-----------------------------------------------
-|   (2)SLOT 3   |             |              |
-----------------------------------------------
-|   (3)SLOT 4   |             |              |
-----------------------------------------------
+------------------------------------------------------------------------
+|     SLOTS     |   MEAT(0)   |  POINT(1)    |  TIME(2)   |   STATUS(3)
+------------------------------------------------------------------------
+|   (0)SLOT 1   |             |              |            |
+------------------------------------------------------------------------
+|   (1)SLOT 2   |             |              |            |
+------------------------------------------------------------------------
+|   (2)SLOT 3   |             |              |            |
+------------------------------------------------------------------------
+|   (3)SLOT 4   |             |              |            |
+------------------------------------------------------------------------
 */
 
 void setup(){  
-  Serial.begin(9600);
+  slot[0][2]=120;
+  slot[1][2]=150;
+  slot[2][2]=180;
+  slot[3][2]=210;
+  Timer1.initialize(1000000); 
+  Timer1.attachInterrupt(controlAll);
+  pinMode(transistor_base, OUTPUT);  
   disp.begin(16,2);
+  
 }  
   
 void loop() {
-  switch(optionsMenu) {
+  switch(options_menu) {
     case 0: 
       screen0();
       break;
@@ -95,15 +108,13 @@ void screen0() {
     resp = keyboardRead();
     
     if(resp == 5) {
-      optionsMenu++;
+      options_menu++;
     }
-  } while(optionsMenu == 0);
+  } while(options_menu == 0);
 }
 
 void screen1() {
-  // int menu = matriz_esp[valor_esp][0]; // inicia valor do menu  
-  int menu = 1, button = 0;  
-  int control = 0;
+  int menu = 1; 
   
   do {
     disp.setCursor(0,0);
@@ -113,50 +124,41 @@ void screen1() {
       case 1:
         disp.setCursor(0,1);
         disp.print("> SLOT 1        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          selected_slot();
-        }
+        slot_atual = 0;
         break;
       case 2:
         disp.setCursor(0,1);
         disp.print("> SLOT 2        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          selected_slot();
-        }
+        slot_atual = 1;
         break;
       case 3:
         disp.setCursor(0,1);
         disp.print("> SLOT 3        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          selected_slot();
-        }
+        slot_atual = 2;
         break;
       case 4:
         disp.setCursor(0,1);
         disp.print("> SLOT 4        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          selected_slot();
-        }
+        slot_atual = 3;
         break;
     }
-    
-    resp = keyboardRead();
 
-    if(resp == 3) {
-      menu++;
-      if(menu >= 5) menu = 4;  
-    }
-    else if(resp == 2) {
-      menu--;
-      if(menu <= 0) menu = 1;
-    }
-  } while(resp != 5);
-  //matriz_esp[valor_esp][0]=menu;
-  optionsMenu++;
+   resp = keyboardRead();
+   
+   if(resp == 1) {
+    screen2();
+   } 
+   
+   else if(resp == 3) {
+    menu++;
+    if(menu >= 5) menu = 4;  
+   }
+   
+   else if(resp == 2) {
+    menu--;
+    if(menu <= 0) menu = 1;
+   }
+  } while(1);
 }
 
 void screen2() {
@@ -200,8 +202,6 @@ void screen2() {
         }
         break;
     }
-  
-    resp = keyboardRead();
     
     if(resp == 3) {
       menu++;
@@ -211,13 +211,16 @@ void screen2() {
       menu--;
       if(menu <= 0) menu = 1;
     } 
-  } while(resp != 5);
-  //matriz_esp[valor_esp][0]=menu;
-  optionsMenu++;
+  } while(1);
+  //options_menu++;
 }
 
 void screen3() {
   int menu = 1;  
+  
+  if(slot[slot_atual][1] > 0) { // carrega valor se tiver algo escrito
+    menu = slot[slot_atual][0];
+  }
   
   do {
     disp.setCursor(0,0);
@@ -227,46 +230,31 @@ void screen3() {
       case 1:
         disp.setCursor(0,1);
         disp.print("> BOVINA        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen4();
-        }
         break;
       case 2:
         disp.setCursor(0,1);
         disp.print("> SUINA         ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen4();
-        }
         break;
       case 3:
         disp.setCursor(0,1);
-        disp.print("> AVES          ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen4();
-        }
+        disp.print("> AVES          ");    
         break;
       case 4:
         disp.setCursor(0,1);
         disp.print("> CORACAO       ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen4();
-        }
         break;
       case 5: 
         disp.setCursor(0,1);
         disp.print("> QUEIJO        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen4();
-        }
         break;
     }
 
     resp = keyboardRead();
+    
+    if(resp == 1) { // carrega opção escolhida
+        slot[slot_atual][1] = menu;
+        screen4();
+    }
     
     if(resp == 3) {
       menu++;
@@ -276,13 +264,15 @@ void screen3() {
       menu--;
       if(menu <= 0) menu = 1;
     }
-  } while(resp != 5);   
-
-  optionsMenu++;
+  } while(1);   
 }
 
 void screen4() {
   int menu = 1;  
+  
+  if(slot[slot_atual][2] > 0) { //carrega valor se tiver algo escrito
+    menu = slot[slot_atual][1];
+  }
   
   do {
     disp.setCursor(0,0);
@@ -292,31 +282,23 @@ void screen4() {
       case 1:
         disp.setCursor(0,1);
         disp.print("> RARE          ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen1();
-        }
         break;
       case 2:
         disp.setCursor(0,1);
         disp.print("> MEDIUM        ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen1();
-        }
         break;
       case 3:
         disp.setCursor(0,1);
         disp.print("> WELL DONE     ");
-        resp = keyboardRead();
-        if(resp == 1) {
-          screen1();
-        }
         break;
     }
 
     resp = keyboardRead();
     
+    if(resp == 1) { // carrega
+      slot[slot_atual][1] = menu;
+      screen1();
+    }
     if(resp == 3) {
       menu++;
       if(menu >= 4) menu = 3;  
@@ -327,24 +309,66 @@ void screen4() {
     }
   } while(resp != 5);   
 
-  optionsMenu++;
+  //options_menu++;
 }
 
 void screen5() {
   // equações para mostrar o tempo de preparo no display LCD
+  do {
+    show_time = 1;
+    disp.setCursor(0,0);
+    disp.print("TIME:           ");
+    
+    // TIMER
+    disp.setCursor(0,1);
+    disp.print("                ");
+    
+    resp = keyboardRead();
+    
+    if(resp == 5) { // carrega
+      show_time = 0;
+      screen2();
+    }
+  } while(1);
 }
 
 void screen6() {
   // inicia o preparo da carne
-}
-
-void selected_slot() {
-  int resp = 0;
-  resp = keyboardRead();
-  
-  if(resp == 1) {
-    screen2();
+  if(slot[slot_atual][3] == 0) {
+    esp1_count = 0;
+    slot[slot_atual][3] = 1;
+    disp.setCursor(0,0);
+    disp.print("STARTING        ");
+    disp.setCursor(0,1);
+    disp.print(".               ");
+    delay(300);
+    disp.setCursor(0,1);
+    disp.print("..              ");
+    delay(300);
+    disp.setCursor(0,1);
+    disp.print("...             ");
+    delay(300);
+    disp.setCursor(0,1);
+    disp.print("....            ");
+    delay(300);
+    disp.setCursor(0,1);
+    disp.print(".....           ");
+    delay(300);
+    disp.setCursor(0,1);
+    disp.print("......          ");
+    delay(300);
+    disp.setCursor(0,1);
+    disp.print(".......         ");
+    delay(300);
+    digitalWrite(transistor_base, HIGH);
+  } else {
+    disp.setCursor(0,0);
+    disp.print("SLOT            ");
+    disp.setCursor(0,1);
+    disp.print("WORKING         ");
+    resp = keyboardRead();
   }
+  screen2();
 }
 
 int keyboardRead() {
@@ -401,6 +425,44 @@ int keyboardRead() {
   return (0);
 }
 
+void controlAll() {
+  if(slot[0][3] == 1) { // espetinho on
+    esp1_count++;
+    digitalWrite(9, LOW);
+  }    
+  
+  if (esp1_count >= slot[0][2]) {
+    slot[0][3] == 0;
+    esp1_count = 0;
+    esp1_done = 1;
+    digitalWrite(9, HIGH);
+  } 
+  
+  if(show_time == 1) {
+    if(slot_atual == 0 && slot[slot_atual][3] == 1) {
+      unsigned long t = slot[slot_atual][2] - esp1_count;
+      unsigned long m = (t / 60);
+      unsigned long s = t % 60;
+      disp.setCursor(0,1);
+      disp.print(m);
+      disp.setCursor(1,1);
+      disp.print(":");
+      disp.setCursor(2,1);
+      disp.print(s);
+    } 
+    else if (slot_atual == 1 && slot[slot_atual][3] == 1) {
+      unsigned long t = slot[slot_atual][2] - esp1_count;
+      unsigned long m (t / 60);
+      unsigned long s = t % 60;
+      disp.setCursor(0,1);
+      disp.print(m);
+      disp.setCursor(1,1);
+      disp.print(":");
+      disp.setCursor(2,1);
+      disp.print(s);
+    }
+  }
+}  
 
 
 
